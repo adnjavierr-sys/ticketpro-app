@@ -1,46 +1,29 @@
 // app.js
-
-// Esperar a que el DOM esté completamente cargado
 document.addEventListener('DOMContentLoaded', function() {
-    // Inicializar la aplicación
     initApp();
 });
 
-// Función principal de inicialización
 function initApp() {
-    // Configurar navegación
     setupNavigation();
-    
-    // Cargar datos iniciales
     loadInitialData();
-    
-    // Configurar formularios
     setupForms();
-    
-    // Inicializar gráficos
+    cargarClientesEnSelects();
     initCharts();
 }
 
-// Configurar navegación
 function setupNavigation() {
     document.querySelectorAll('.nav-link').forEach(link => {
         link.addEventListener('click', function(e) {
             e.preventDefault();
             
-            // Remover clase activa de todos los enlaces
             document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
-            
-            // Agregar clase activa al enlace clickeado
             this.classList.add('active');
             
-            // Ocultar todas las páginas
             document.querySelectorAll('.page-content').forEach(page => page.style.display = 'none');
             
-            // Mostrar página seleccionada
             const pageId = this.getAttribute('data-page') + '-page';
             document.getElementById(pageId).style.display = 'block';
             
-            // Inicializar gráficos si es necesario
             if (this.getAttribute('data-page') === 'agentes') {
                 initAgentCharts();
             } else if (this.getAttribute('data-page') === 'dashboard') {
@@ -50,12 +33,10 @@ function setupNavigation() {
     });
 }
 
-// Configurar sidebar móvil
 document.getElementById('toggleSidebar').addEventListener('click', function() {
     document.getElementById('sidebar').classList.toggle('active');
 });
 
-// Cargar datos iniciales
 async function loadInitialData() {
     try {
         await cargarTickets();
@@ -68,34 +49,10 @@ async function loadInitialData() {
     }
 }
 
-// Configurar formularios
 function setupForms() {
-    // Formulario de tickets
-    document.getElementById('ticketForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-        guardarTicket();
-    });
-    
-    // Formulario de clientes
-    document.getElementById('clienteForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-        guardarCliente();
-    });
-    
-    // Formulario de agentes
-    document.getElementById('agenteForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-        guardarAgente();
-    });
-    
-    // Formulario de pólizas
-    document.getElementById('polizaForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-        guardarPoliza();
-    });
+    // Los manejadores de eventos se agregan directamente en los formularios
 }
 
-// Función para mostrar notificaciones
 function showNotification(message, type) {
     const notification = document.createElement('div');
     notification.className = `alert alert-${type} alert-dismissible fade show position-fixed top-0 end-0 m-3`;
@@ -112,7 +69,6 @@ function showNotification(message, type) {
     }, 3000);
 }
 
-// Funciones para cargar datos (usando funciones de database.js)
 async function cargarTickets() {
     try {
         const tickets = await getTickets();
@@ -142,112 +98,32 @@ async function cargarTickets() {
     }
 }
 
-// Función para guardar ticket
-async function guardarTicket() {
-    const form = document.getElementById('ticketForm');
-    
-    const ticketData = {
-        titulo: form.querySelector('input[type="text"]').value,
-        cliente_id: form.querySelectorAll('select')[0].value,
-        categoria: form.querySelectorAll('select')[1].value,
-        estado: 'Abierto',
-        prioridad: form.querySelectorAll('select')[2].value,
-        agente_id: form.querySelectorAll('select')[3].value || null,
-        descripcion: form.querySelector('textarea').value
-    };
-    
-    try {
-        const savedTicket = await createTicket(ticketData);
-        if (savedTicket) {
-            bootstrap.Modal.getInstance(document.getElementById('ticketModal')).hide();
-            form.reset();
-            await cargarTickets();
-            showNotification('Ticket guardado exitosamente', 'success');
-        }
-    } catch (error) {
-        console.error('Error al guardar ticket:', error);
-        showNotification('Error al guardar el ticket', 'danger');
-    }
-}
-
-// Función para eliminar ticket
-async function eliminarTicket(id) {
-    if (confirm('¿Está seguro de eliminar este ticket?')) {
-        try {
-            const success = await deleteTicket(id);
-            if (success) {
-                await cargarTickets();
-                showNotification('Ticket eliminado exitosamente', 'success');
-            } else {
-                showNotification('Error al eliminar el ticket', 'danger');
-            }
-        } catch (error) {
-            console.error('Error al eliminar ticket:', error);
-            showNotification('Error al eliminar el ticket', 'danger');
-        }
-    }
-}
-
-// Función para cargar clientes
 async function cargarClientes() {
     try {
         const clientes = await getClientes();
-        const select = document.querySelector('#ticketModal select');
+        const tbody = document.getElementById('clientesTableBody');
         
-        if (select) {
-            select.innerHTML = '<option value="">Seleccionar cliente</option>' +
-                clientes.map(cliente => `<option value="${cliente.id}">${cliente.empresa}</option>`).join('');
+        if (tbody) {
+            tbody.innerHTML = clientes.map(cliente => `
+                <tr>
+                    <td>${cliente.id}</td>
+                    <td>${cliente.empresa}</td>
+                    <td>${cliente.contacto}</td>
+                    <td>${cliente.email}</td>
+                    <td>${cliente.telefono}</td>
+                    <td><span class="badge bg-success">Activo</span></td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-primary me-1"><i class="fas fa-edit"></i></button>
+                        <button class="btn btn-sm btn-danger" onclick="eliminarCliente(${cliente.id})"><i class="fas fa-trash"></i></button>
+                    </td>
+                </tr>
+            `).join('');
         }
     } catch (error) {
         console.error('Error al cargar clientes:', error);
     }
 }
 
-// Función para guardar cliente
-async function guardarCliente() {
-    const form = document.getElementById('clienteForm');
-    
-    const clienteData = {
-        empresa: form.querySelectorAll('input[type="text"]')[0].value,
-        contacto: form.querySelectorAll('input[type="text"]')[1].value,
-        email: form.querySelectorAll('input[type="email"]')[0].value,
-        telefono: form.querySelectorAll('input[type="text"]')[2].value,
-        direccion: form.querySelector('textarea').value
-    };
-    
-    try {
-        const savedCliente = await createCliente(clienteData);
-        if (savedCliente) {
-            bootstrap.Modal.getInstance(document.getElementById('clienteModal')).hide();
-            form.reset();
-            await cargarClientes();
-            showNotification('Cliente guardado exitosamente', 'success');
-        }
-    } catch (error) {
-        console.error('Error al guardar cliente:', error);
-        showNotification('Error al guardar el cliente', 'danger');
-    }
-}
-
-// Función para eliminar cliente
-async function eliminarCliente(id) {
-    if (confirm('¿Está seguro de eliminar este cliente?')) {
-        try {
-            const success = await deleteCliente(id);
-            if (success) {
-                await cargarClientes();
-                showNotification('Cliente eliminado exitosamente', 'success');
-            } else {
-                showNotification('Error al eliminar el cliente', 'danger');
-            }
-        } catch (error) {
-            console.error('Error al eliminar cliente:', error);
-            showNotification('Error al eliminar el cliente', 'danger');
-        }
-    }
-}
-
-// Función para cargar agentes
 async function cargarAgentes() {
     try {
         const agentes = await getAgentes();
@@ -282,52 +158,6 @@ async function cargarAgentes() {
     }
 }
 
-// Función para guardar agente
-async function guardarAgente() {
-    const form = document.getElementById('agenteForm');
-    
-    const agenteData = {
-        nombre: form.querySelectorAll('input[type="text"]')[0].value,
-        email: form.querySelectorAll('input[type="email"]')[0].value,
-        telefono: form.querySelectorAll('input[type="text"]')[1].value,
-        rol: form.querySelectorAll('select')[0].value,
-        especialidad: form.querySelectorAll('select')[1].value,
-        estado: 'Offline'
-    };
-    
-    try {
-        const savedAgente = await createAgente(agenteData);
-        if (savedAgente) {
-            bootstrap.Modal.getInstance(document.getElementById('agenteModal')).hide();
-            form.reset();
-            await cargarAgentes();
-            showNotification('Agente guardado exitosamente', 'success');
-        }
-    } catch (error) {
-        console.error('Error al guardar agente:', error);
-        showNotification('Error al guardar el agente', 'danger');
-    }
-}
-
-// Función para eliminar agente
-async function eliminarAgente(id) {
-    if (confirm('¿Está seguro de eliminar este agente?')) {
-        try {
-            const success = await deleteAgente(id);
-            if (success) {
-                await cargarAgentes();
-                showNotification('Agente eliminado exitosamente', 'success');
-            } else {
-                showNotification('Error al eliminar el agente', 'danger');
-            }
-        } catch (error) {
-            console.error('Error al eliminar agente:', error);
-            showNotification('Error al eliminar el agente', 'danger');
-        }
-    }
-}
-
-// Función para cargar pólizas
 async function cargarPolizas() {
     try {
         const polizas = await getPolizas();
@@ -355,12 +185,124 @@ async function cargarPolizas() {
     }
 }
 
-// Función para guardar póliza
-async function guardarPoliza() {
-    const form = document.getElementById('polizaForm');
+async function cargarClientesEnSelects() {
+    try {
+        const clientes = await getClientes();
+        const agentes = await getAgentes();
+        
+        const ticketClienteSelect = document.getElementById('clienteSelect');
+        if (ticketClienteSelect) {
+            ticketClienteSelect.innerHTML = '<option value="">Seleccionar cliente</option>' +
+                clientes.map(cliente => `<option value="${cliente.id}">${cliente.empresa}</option>`).join('');
+        }
+        
+        const agenteSelect = document.getElementById('agenteSelect');
+        if (agenteSelect) {
+            agenteSelect.innerHTML = '<option value="">Sin asignar</option>' +
+                agentes.map(agente => `<option value="${agente.id}">${agente.nombre}</option>`).join('');
+        }
+        
+        const polizaClienteSelect = document.getElementById('polizaClienteSelect');
+        if (polizaClienteSelect) {
+            polizaClienteSelect.innerHTML = '<option value="">Seleccionar cliente</option>' +
+                clientes.map(cliente => `<option value="${cliente.id}">${cliente.empresa}</option>`).join('');
+        }
+    } catch (error) {
+        console.error('Error al cargar datos para selects:', error);
+        showNotification('Error al cargar datos', 'danger');
+    }
+}
+
+// Event listeners para formularios
+document.getElementById('ticketForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
     
+    const form = this;
+    const ticketData = {
+        titulo: form.querySelector('input[type="text"]').value,
+        clientes_id: form.querySelector('#clienteSelect').value,
+        categoria: form.querySelectorAll('select')[1].value,
+        estado: 'Abierto',
+        prioridad: form.querySelectorAll('select')[2].value,
+        agentes_id: form.querySelector('#agenteSelect').value || null,
+        descripcion: form.querySelector('textarea').value
+    };
+    
+    try {
+        const savedTicket = await createTicket(ticketData);
+        if (savedTicket) {
+            bootstrap.Modal.getInstance(document.getElementById('ticketModal')).hide();
+            form.reset();
+            await cargarTickets();
+            showNotification('Ticket guardado exitosamente', 'success');
+        }
+    } catch (error) {
+        console.error('Error al guardar ticket:', error);
+        showNotification('Error al guardar el ticket', 'danger');
+    }
+});
+
+document.getElementById('clienteForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const form = this;
+    const clienteData = {
+        empresa: form.querySelectorAll('input[type="text"]')[0].value,
+        contacto: form.querySelectorAll('input[type="text"]')[1].value,
+        email: form.querySelectorAll('input[type="email"]')[0].value,
+        telefono: form.querySelectorAll('input[type="text"]')[2].value,
+        direccion: form.querySelector('textarea').value
+    };
+    
+    try {
+        const savedCliente = await createCliente(clienteData);
+        if (savedCliente) {
+            bootstrap.Modal.getInstance(document.getElementById('clienteModal')).hide();
+            form.reset();
+            await cargarClientes();
+            await cargarClientesEnSelects();
+            showNotification('Cliente guardado exitosamente', 'success');
+        }
+    } catch (error) {
+        console.error('Error al guardar cliente:', error);
+        showNotification('Error al guardar el cliente', 'danger');
+    }
+});
+
+document.getElementById('agenteForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const form = this;
+    const agenteData = {
+        nombre: form.querySelectorAll('input[type="text"]')[0].value,
+        email: form.querySelectorAll('input[type="email"]')[0].value,
+        telefono: form.querySelectorAll('input[type="text"]')[1].value,
+        rol: form.querySelectorAll('select')[0].value,
+        especialidad: form.querySelectorAll('select')[1].value,
+        estado: 'Offline'
+    };
+    
+    try {
+        const savedAgente = await createAgente(agenteData);
+        if (savedAgente) {
+            bootstrap.Modal.getInstance(document.getElementById('agenteModal')).hide();
+            form.reset();
+            await cargarAgentes();
+            await cargarClientesEnSelects();
+            showNotification('Agente guardado exitosamente', 'success');
+        }
+    } catch (error) {
+        console.error('Error al guardar agente:', error);
+        showNotification('Error al guardar el agente', 'danger');
+    }
+});
+
+document.getElementById('polizaForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const form = this;
     const polizaData = {
-        cliente_id: form.querySelector('select').value,
+        clientes_id: form.querySelector('#polizaClienteSelect').value,
         tipo: form.querySelectorAll('select')[1].value,
         vigencia_inicio: form.querySelectorAll('input[type="date"]')[0].value,
         vigencia_fin: form.querySelectorAll('input[type="date"]')[1].value,
@@ -380,9 +322,56 @@ async function guardarPoliza() {
         console.error('Error al guardar póliza:', error);
         showNotification('Error al guardar la póliza', 'danger');
     }
+});
+
+// Funciones de eliminación
+async function eliminarTicket(id) {
+    if (confirm('¿Está seguro de eliminar este ticket?')) {
+        try {
+            const success = await deleteTicket(id);
+            if (success) {
+                await cargarTickets();
+                showNotification('Ticket eliminado exitosamente', 'success');
+            }
+        } catch (error) {
+            console.error('Error al eliminar ticket:', error);
+            showNotification('Error al eliminar el ticket', 'danger');
+        }
+    }
 }
 
-// Función para eliminar póliza
+async function eliminarCliente(id) {
+    if (confirm('¿Está seguro de eliminar este cliente?')) {
+        try {
+            const success = await deleteCliente(id);
+            if (success) {
+                await cargarClientes();
+                await cargarClientesEnSelects();
+                showNotification('Cliente eliminado exitosamente', 'success');
+            }
+        } catch (error) {
+            console.error('Error al eliminar cliente:', error);
+            showNotification('Error al eliminar el cliente', 'danger');
+        }
+    }
+}
+
+async function eliminarAgente(id) {
+    if (confirm('¿Está seguro de eliminar este agente?')) {
+        try {
+            const success = await deleteAgente(id);
+            if (success) {
+                await cargarAgentes();
+                await cargarClientesEnSelects();
+                showNotification('Agente eliminado exitosamente', 'success');
+            }
+        } catch (error) {
+            console.error('Error al eliminar agente:', error);
+            showNotification('Error al eliminar el agente', 'danger');
+        }
+    }
+}
+
 async function eliminarPoliza(id) {
     if (confirm('¿Está seguro de eliminar esta póliza?')) {
         try {
@@ -390,8 +379,6 @@ async function eliminarPoliza(id) {
             if (success) {
                 await cargarPolizas();
                 showNotification('Póliza eliminada exitosamente', 'success');
-            } else {
-                showNotification('Error al eliminar la póliza', 'danger');
             }
         } catch (error) {
             console.error('Error al eliminar póliza:', error);
@@ -400,7 +387,7 @@ async function eliminarPoliza(id) {
     }
 }
 
-// Función para inicializar gráficos
+// Funciones para inicializar gráficos
 function initCharts() {
     // Tickets Evolution Chart
     const ticketsCtx = document.getElementById('ticketsChart');
@@ -475,7 +462,6 @@ function initCharts() {
     }
 }
 
-// Función para inicializar gráficos de agentes
 function initAgentCharts() {
     // Agent Performance Chart
     const agentPerfCtx = document.getElementById('agentPerformanceChart');
@@ -526,158 +512,4 @@ function initAgentCharts() {
             }
         });
     }
-}
-// Función para cargar clientes en los selects
-async function cargarClientesEnSelects() {
-    try {
-        const clientes = await getClientes();
-        const agentes = await getAgentes();
-        
-        // Cargar clientes en el select del ticket modal
-        const ticketClienteSelect = document.getElementById('clienteSelect');
-        if (ticketClienteSelect) {
-            ticketClienteSelect.innerHTML = '<option value="">Seleccionar cliente</option>' +
-                clientes.map(cliente => `<option value="${cliente.id}">${cliente.empresa}</option>`).join('');
-        }
-        
-        // Cargar agentes en el select del ticket modal
-        const agenteSelect = document.getElementById('agenteSelect');
-        if (agenteSelect) {
-            agenteSelect.innerHTML = '<option value="">Sin asignar</option>' +
-                agentes.map(agente => `<option value="${agente.id}">${agente.nombre}</option>`).join('');
-        }
-        
-        // Cargar clientes en el select del poliza modal
-        const polizaClienteSelect = document.getElementById('polizaClienteSelect');
-        if (polizaClienteSelect) {
-            polizaClienteSelect.innerHTML = '<option value="">Seleccionar cliente</option>' +
-                clientes.map(cliente => `<option value="${cliente.id}">${cliente.empresa}</option>`).join('');
-        }
-    } catch (error) {
-        console.error('Error al cargar datos para selects:', error);
-        showNotification('Error al cargar datos', 'danger');
-    }
-}
-
-// Función para manejar el envío del formulario de tickets
-document.getElementById('ticketForm').addEventListener('submit', async function(e) {
-    e.preventDefault();
-    
-    const form = this;
-    const ticketData = {
-        titulo: form.querySelector('input[type="text"]').value,
-        cliente_id: form.querySelector('#clienteSelect').value,
-        categoria: form.querySelectorAll('select')[1].value,
-        estado: 'Abierto',
-        prioridad: form.querySelectorAll('select')[2].value,
-        agente_id: form.querySelector('#agenteSelect').value || null,
-        descripcion: form.querySelector('textarea').value
-    };
-    
-    try {
-        const savedTicket = await createTicket(ticketData);
-        if (savedTicket) {
-            bootstrap.Modal.getInstance(document.getElementById('ticketModal')).hide();
-            form.reset();
-            await cargarTickets();
-            showNotification('Ticket guardado exitosamente', 'success');
-        }
-    } catch (error) {
-        console.error('Error al guardar ticket:', error);
-        showNotification('Error al guardar el ticket', 'danger');
-    }
-});
-
-// Función para manejar el envío del formulario de clientes
-document.getElementById('clienteForm').addEventListener('submit', async function(e) {
-    e.preventDefault();
-    
-    const form = this;
-    const clienteData = {
-        empresa: form.querySelectorAll('input[type="text"]')[0].value,
-        contacto: form.querySelectorAll('input[type="text"]')[1].value,
-        email: form.querySelectorAll('input[type="email"]')[0].value,
-        telefono: form.querySelectorAll('input[type="text"]')[2].value,
-        direccion: form.querySelector('textarea').value
-    };
-    
-    try {
-        const savedCliente = await createCliente(clienteData);
-        if (savedCliente) {
-            bootstrap.Modal.getInstance(document.getElementById('clienteModal')).hide();
-            form.reset();
-            await cargarClientes();
-            await cargarClientesEnSelects(); // Actualizar selects
-            showNotification('Cliente guardado exitosamente', 'success');
-        }
-    } catch (error) {
-        console.error('Error al guardar cliente:', error);
-        showNotification('Error al guardar el cliente', 'danger');
-    }
-});
-
-// Función para manejar el envío del formulario de agentes
-document.getElementById('agenteForm').addEventListener('submit', async function(e) {
-    e.preventDefault();
-    
-    const form = this;
-    const agenteData = {
-        nombre: form.querySelectorAll('input[type="text"]')[0].value,
-        email: form.querySelectorAll('input[type="email"]')[0].value,
-        telefono: form.querySelectorAll('input[type="text"]')[1].value,
-        rol: form.querySelectorAll('select')[0].value,
-        especialidad: form.querySelectorAll('select')[1].value,
-        estado: 'Offline'
-    };
-    
-    try {
-        const savedAgente = await createAgente(agenteData);
-        if (savedAgente) {
-            bootstrap.Modal.getInstance(document.getElementById('agenteModal')).hide();
-            form.reset();
-            await cargarAgentes();
-            await cargarClientesEnSelects(); // Actualizar selects
-            showNotification('Agente guardado exitosamente', 'success');
-        }
-    } catch (error) {
-        console.error('Error al guardar agente:', error);
-        showNotification('Error al guardar el agente', 'danger');
-    }
-});
-
-// Función para manejar el envío del formulario de pólizas
-document.getElementById('polizaForm').addEventListener('submit', async function(e) {
-    e.preventDefault();
-    
-    const form = this;
-    const polizaData = {
-        cliente_id: form.querySelector('#polizaClienteSelect').value,
-        tipo: form.querySelectorAll('select')[1].value,
-        vigencia_inicio: form.querySelectorAll('input[type="date"]')[0].value,
-        vigencia_fin: form.querySelectorAll('input[type="date"]')[1].value,
-        monto: parseFloat(form.querySelector('input[type="number"]').value),
-        estado: 'Vigente'
-    };
-    
-    try {
-        const savedPoliza = await createPoliza(polizaData);
-        if (savedPoliza) {
-            bootstrap.Modal.getInstance(document.getElementById('polizaModal')).hide();
-            form.reset();
-            await cargarPolizas();
-            showNotification('Póliza guardada exitosamente', 'success');
-        }
-    } catch (error) {
-        console.error('Error al guardar póliza:', error);
-        showNotification('Error al guardar la póliza', 'danger');
-    }
-});
-
-// Actualizar la función initApp para cargar los selects
-function initApp() {
-    setupNavigation();
-    loadInitialData();
-    setupForms();
-    cargarClientesEnSelects(); // Nueva línea
-    initCharts();
 }

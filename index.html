@@ -6,6 +6,10 @@
     <title>Sistema de Gestión de Tickets - TicketPro</title>
     <meta name="description" content="Sistema completo de gestión de tickets con categorías, clientes, pólizas y reportes automáticos">
     
+   <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Gestión de Tickets - TicketPro</title>
+    
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     
@@ -15,18 +19,21 @@
     <!-- Estilos personalizados -->
     <link rel="stylesheet" href="styles.css">
     
-    <!-- LIBRERÍA DE SUPABASE -->
+    <!-- SCRIPTS - ¡EL ORDEN ES CRUCIAL! -->
+    <!-- 1. Primero la librería de Supabase -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.7/dist/umd/supabase.min.js"></script>
     
-    <!-- Configuración de Supabase -->
+    <!-- 2. Luego la configuración de Supabase -->
     <script src="config.js"></script>
     
-    <!-- Funciones de base de datos -->
+    <!-- 3. Luego las funciones de base de datos -->
     <script src="database.js"></script>
     
-    <!-- Scripts de la aplicación -->
+    <!-- 4. Luego los scripts de terceros -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- 5. Finalmente, el script principal de la aplicación -->
     <script src="app.js"></script>
 </head>
 <body>
@@ -1053,3 +1060,4 @@
     </div>
 </body>
 </html>
+

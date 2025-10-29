@@ -21,7 +21,7 @@
     function initializeSupabase() {
         // Variables de configuración de Supabase
         const SUPABASE_URL = 'https://fmxtytggeedhqqigyocw.supabase.co';
-        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxNni43kdQwgnWNReilDMblYTn_I0U';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZteHR5dGdnZWVkaHFxaWd5b2N3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE2NTE2MDUsImV4cCI6MjA3NzIyNzYwNX0.xndFnGd6jWAh7cofbBKxEYrotYgiCDSRE4c7-KfNJn4';
         
         // Verificar que las variables estén definidas
         if (!SUPABASE_URL || !SUPABASE_KEY) {
@@ -42,4 +42,5 @@
         }
     }
 })();
+
 

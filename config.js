@@ -20,7 +20,7 @@
     
     function initializeSupabase() {
         // Variables de configuración de Supabase
-        const SUPABASE_URL = 'https://TU-PROYECTO.supabase.co';
+        const SUPABASE_URL = 'https://fmxtytggeedhqqigyocw.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxNni43kdQwgnWNReilDMblYTn_I0U';
         
         // Verificar que las variables estén definidas
@@ -42,3 +42,4 @@
         }
     }
 })();
+

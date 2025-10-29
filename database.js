@@ -1,20 +1,21 @@
-// database.js
-// Asegurarse de que el cliente de Supabase esté disponible
-if (!window.supabase) {
-    console.error('Error: El cliente de Supabase no está disponible');
-} else {
+// database.js - Versión final y corregida
+(function() {
+    'use strict';
+    
+    // Verificar que el cliente de Supabase esté disponible
+    if (!window.supabase) {
+        console.error('❌ Error: El cliente de Supabase no está disponible');
+        return;
+    }
+    
     // Funciones de base de datos
     async function getTickets() {
         const { data, error } = await window.supabase
             .from('tickets')
-            .select(`
-                *,
-                clientes: clientes_id (empresa),
-                agentes: agentes_id (nombre)
-            `);
+            .select('*');
         
         if (error) {
-            console.error('Error al obtener tickets:', error);
+            console.error('❌ Error al obtener tickets:', error);
             throw error;
         }
         
@@ -29,7 +30,7 @@ if (!window.supabase) {
             .single();
         
         if (error) {
-            console.error('Error al crear ticket:', error);
+            console.error('❌ Error al crear ticket:', error);
             throw error;
         }
         
@@ -43,7 +44,7 @@ if (!window.supabase) {
             .eq('id', id);
         
         if (error) {
-            console.error('Error al eliminar ticket:', error);
+            console.error('❌ Error al eliminar ticket:', error);
             throw error;
         }
         
@@ -56,7 +57,7 @@ if (!window.supabase) {
             .select('*');
         
         if (error) {
-            console.error('Error al obtener clientes:', error);
+            console.error('❌ Error al obtener clientes:', error);
             throw error;
         }
         
@@ -71,7 +72,7 @@ if (!window.supabase) {
             .single();
         
         if (error) {
-            console.error('Error al crear cliente:', error);
+            console.error('❌ Error al crear cliente:', error);
             throw error;
         }
         
@@ -85,7 +86,7 @@ if (!window.supabase) {
             .eq('id', id);
         
         if (error) {
-            console.error('Error al eliminar cliente:', error);
+            console.error('❌ Error al eliminar cliente:', error);
             throw error;
         }
         
@@ -98,7 +99,7 @@ if (!window.supabase) {
             .select('*');
         
         if (error) {
-            console.error('Error al obtener agentes:', error);
+            console.error('❌ Error al obtener agentes:', error);
             throw error;
         }
         
@@ -113,7 +114,7 @@ if (!window.supabase) {
             .single();
         
         if (error) {
-            console.error('Error al crear agente:', error);
+            console.error('❌ Error al crear agente:', error);
             throw error;
         }
         
@@ -127,7 +128,7 @@ if (!window.supabase) {
             .eq('id', id);
         
         if (error) {
-            console.error('Error al eliminar agente:', error);
+            console.error('❌ Error al eliminar agente:', error);
             throw error;
         }
         
@@ -137,13 +138,10 @@ if (!window.supabase) {
     async function getPolizas() {
         const { data, error } = await window.supabase
             .from('polizas')
-            .select(`
-                *,
-                clientes: clientes_id (empresa)
-            `);
+            .select('*');
         
         if (error) {
-            console.error('Error al obtener pólizas:', error);
+            console.error('❌ Error al obtener pólizas:', error);
             throw error;
         }
         
@@ -158,7 +156,7 @@ if (!window.supabase) {
             .single();
         
         if (error) {
-            console.error('Error al crear póliza:', error);
+            console.error('❌ Error al crear póliza:', error);
             throw error;
         }
         
@@ -172,10 +170,26 @@ if (!window.supabase) {
             .eq('id', id);
         
         if (error) {
-            console.error('Error al eliminar póliza:', error);
+            console.error('❌ Error al eliminar póliza:', error);
             throw error;
         }
         
         return true;
     }
-}
+
+    // Exponer funciones globalmente
+    window.getTickets = getTickets;
+    window.createTicket = createTicket;
+    window.deleteTicket = deleteTicket;
+    window.getClientes = getClientes;
+    window.createCliente = createCliente;
+    window.deleteCliente = deleteCliente;
+    window.getAgentes = getAgentes;
+    window.createAgente = createAgente;
+    window.deleteAgente = deleteAgente;
+    window.getPolizas = getPolizas;
+    window.createPoliza = createPoliza;
+    window.deletePoliza = deletePoliza;
+
+    console.log('✅ Funciones de base de datos cargadas exitosamente');
+})();

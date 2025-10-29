@@ -10,8 +10,8 @@ if (!SUPABASE_URL || !SUPABASE_KEY) {
     window.supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
     console.log('Cliente de Supabase creado exitosamente');
 }
-// Depuración
-console.log('Configuración de Supabase cargada');
-console.log('URL:', SUPABASE_URL);
-console.log('Key disponible:', !!SUPABASE_KEY);
-console.log('Cliente de Supabase:', window.supabase);
+// Depuración - agregar al final de config.js
+console.log('=== Configuración de Supabase ===');
+console.log('URL cargada:', typeof SUPABASE_URL !== 'undefined' ? 'Sí' : 'No');
+console.log('Key cargada:', typeof SUPABASE_KEY !== 'undefined' ? 'Sí' : 'No');
+console.log('Cliente de Supabase:', window.supabase ? 'Creado' : 'No creado');

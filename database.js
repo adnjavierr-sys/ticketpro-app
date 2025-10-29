@@ -1,8 +1,8 @@
-// database.js - Versión corregida
+// database.js
 (function() {
     'use strict';
     
-    // Esperar a que Supabase esté disponible
+    // Wait for Supabase to be available
     function waitForSupabase(callback, maxAttempts = 10) {
         let attempts = 0;
         
@@ -29,7 +29,7 @@
             return;
         }
         
-        // Funciones de base de datos
+        // Functions for database operations
         async function getTickets() {
             try {
                 const { data, error } = await window.supabase
@@ -286,7 +286,7 @@
             }
         }
 
-        // Exponer funciones globalmente
+        // Expose functions globally
         window.getTickets = getTickets;
         window.createTicket = createTicket;
         window.deleteTicket = deleteTicket;

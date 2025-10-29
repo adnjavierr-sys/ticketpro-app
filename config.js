@@ -27,3 +27,8 @@
         console.error('Error al crear cliente de Supabase:', error);
     }
 })();
+// Depuración - agregar al final
+console.log('=== DEPURACIÓN SUPABASE ===');
+console.log('SUPABASE_URL:', typeof SUPABASE_URL, SUPABASE_URL);
+console.log('SUPABASE_KEY:', typeof SUPABASE_KEY, SUPABASE_KEY ? 'Presente' : 'Ausente');
+console.log('supabase global:', typeof window.supabase);

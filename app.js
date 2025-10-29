@@ -133,3 +133,39 @@
     
     console.log('✅ Aplicación cargada completamente');
 })();
+// Agregar esta función al final de app.js para depuración
+function debugNavigation() {
+    console.log('=== DEPURACIÓN DE NAVEGACIÓN ===');
+    
+    // Verificar todos los enlaces de navegación
+    const navLinks = document.querySelectorAll('.nav-link');
+    console.log('Enlaces encontrados:', navLinks.length);
+    
+    navLinks.forEach((link, index) => {
+        const pageName = link.getAttribute('data-page');
+        const pageElement = document.getElementById(pageName + '-page');
+        console.log(`Enlace ${index}:`, {
+            text: link.textContent.trim(),
+            pageName: pageName,
+            pageExists: !!pageElement,
+            isActive: link.classList.contains('active')
+        });
+    });
+    
+    // Verificar páginas visibles
+    const visiblePages = document.querySelectorAll('.page-content:not([style*="display: none"])');
+    console.log('Páginas visibles:', visiblePages.length);
+    
+    visiblePages.forEach(page => {
+        console.log('Página visible:', page.id);
+    });
+}
+
+// Llamar a la función de depuración cuando se carga la aplicación
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🚀 Iniciando aplicación...');
+    initApp();
+    
+    // Llamar a depuración después de un momento
+    setTimeout(debugNavigation, 1000);
+});

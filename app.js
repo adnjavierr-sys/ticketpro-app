@@ -1,683 +1,181 @@
-// app.js
+import { supabase } from './config.js';
+import { fetchTable, insertRecord, updateRecord, deleteRecord } from './database.js';
 
-// Esperar a que el DOM esté completamente cargado
-document.addEventListener('DOMContentLoaded', function() {
-    // Inicializar la aplicación
-    initApp();
-});
+// Elementos del DOM
+const appContainer = document.getElementById('app');
 
-// Función principal de inicialización
-function initApp() {
-    // Configurar navegación
-    setupNavigation();
-    
-    // Cargar datos iniciales
-    loadInitialData();
-    
-    // Configurar formularios
-    setupForms();
-    
-    // Inicializar gráficos
-    initCharts();
-}
+// Estado de la aplicación
+let currentTable = 'polizas'; // Nombre de la tabla por defecto
+let records = [];
 
-// Configurar navegación
-function setupNavigation() {
-    document.querySelectorAll('.nav-link').forEach(link => {
-        link.addEventListener('click', function(e) {
-            e.preventDefault();
+// Función para renderizar la tabla
+function renderTable() {
+    appContainer.innerHTML = `
+        <div class="container">
+            <h1>Gestión de Polizas</h1>
             
-            // Remover clase activa de todos los enlaces
-            document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+            <div class="actions">
+                <button id="add-btn">Agregar Nueva Póliza</button>
+                <button id="refresh-btn">Actualizar</button>
+            </div>
             
-            // Agregar clase activa al enlace clickeado
-            this.classList.add('active');
-            
-            // Ocultar todas las páginas
-            document.querySelectorAll('.page-content').forEach(page => page.style.display = 'none');
-            
-            // Mostrar página seleccionada
-            const pageId = this.getAttribute('data-page') + '-page';
-            document.getElementById(pageId).style.display = 'block';
-            
-            // Inicializar gráficos si es necesario
-            if (this.getAttribute('data-page') === 'agentes') {
-                initAgentCharts();
-            } else if (this.getAttribute('data-page') === 'dashboard') {
-                initCharts();
-            }
-        });
-    });
-}
-
-// Configurar sidebar móvil
-document.getElementById('toggleSidebar').addEventListener('click', function() {
-    document.getElementById('sidebar').classList.toggle('active');
-});
-
-// Cargar datos iniciales
-async function loadInitialData() {
-    try {
-        await cargarTickets();
-        await cargarClientes();
-        await cargarAgentes();
-        await cargarPolizas();
-    } catch (error) {
-        console.error('Error al cargar datos iniciales:', error);
-        showNotification('Error al cargar los datos', 'danger');
-    }
-}
-
-// Configurar formularios
-function setupForms() {
-    // Formulario de tickets
-    document.getElementById('ticketForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-        guardarTicket();
-    });
-    
-    // Formulario de clientes
-    document.getElementById('clienteForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-        guardarCliente();
-    });
-    
-    // Formulario de agentes
-    document.getElementById('agenteForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-        guardarAgente();
-    });
-    
-    // Formulario de pólizas
-    document.getElementById('polizaForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-        guardarPoliza();
-    });
-}
-
-// Función para mostrar notificaciones
-function showNotification(message, type) {
-    const notification = document.createElement('div');
-    notification.className = `alert alert-${type} alert-dismissible fade show position-fixed top-0 end-0 m-3`;
-    notification.style.zIndex = '9999';
-    notification.innerHTML = `
-        ${message}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Cliente</th>
+                        <th>Tipo</th>
+                        <th>Vigencia</th>
+                        <th>Monto</th>
+                        <th>Estado</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="records-tbody">
+                    ${records.map(record => `
+                        <tr data-id="${record.id}">
+                            <td>${record.id}</td>
+                            <td>${record.cliente}</td>
+                            <td>${record.tipo}</td>
+                            <td>${record.vigencia}</td>
+                            <td>${record.monto}</td>
+                            <td>${record.estado}</td>
+                            <td>
+                                <button class="edit-btn">Editar</button>
+                                <button class="delete-btn">Eliminar</button>
+                            </td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Modal para agregar/editar -->
+        <div id="modal" class="modal">
+            <div class="modal-content">
+                <span class="close-btn">&times;</span>
+                <h2 id="modal-title">Agregar Nueva Póliza</h2>
+                <form id="record-form">
+                    <input type="hidden" id="record-id">
+                    <div class="form-group">
+                        <label for="cliente">Cliente:</label>
+                        <input type="text" id="cliente" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="tipo">Tipo:</label>
+                        <input type="text" id="tipo" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="vigencia">Vigencia:</label>
+                        <input type="date" id="vigencia" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="monto">Monto:</label>
+                        <input type="number" id="monto" step="0.01" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="estado">Estado:</label>
+                        <select id="estado" required>
+                            <option value="Vigente">Vigente</option>
+                            <option value="Por Vencer">Por Vencer</option>
+                            <option value="Vencida">Vencida</option>
+                        </select>
+                    </div>
+                    <button type="submit" id="submit-btn">Guardar</button>
+                </form>
+            </div>
+        </div>
     `;
-    
-    document.body.appendChild(notification);
-    
-    setTimeout(() => {
-        notification.remove();
-    }, 3000);
-}
 
-// Funciones para cargar datos (usando funciones de database.js)
-async function cargarTickets() {
-    try {
-        const tickets = await getTickets();
-        const tbody = document.getElementById('ticketsTableBody');
-        
-        if (!tbody) return;
-        
-        tbody.innerHTML = tickets.map(ticket => `
-            <tr>
-                <td>#${String(ticket.id).padStart(5, '0')}</td>
-                <td>${ticket.titulo}</td>
-                <td>${ticket.clientes?.empresa || 'N/A'}</td>
-                <td><span class="badge badge-${ticket.categoria.toLowerCase()}">${ticket.categoria}</span></td>
-                <td><span class="status-badge status-${ticket.estado.toLowerCase().replace(' ', '-')}">${ticket.estado}</span></td>
-                <td><span class="agent-chip"><i class="fas fa-circle agent-${ticket.agentes ? 'online' : 'offline'}"></i> ${ticket.agentes?.nombre || 'Sin asignar'}</span></td>
-                <td><span class="badge bg-${ticket.prioridad.toLowerCase() === 'alta' ? 'danger' : ticket.prioridad.toLowerCase() === 'media' ? 'warning' : 'success'}">${ticket.prioridad}</span></td>
-                <td>${new Date(ticket.created_at).toLocaleDateString()}</td>
-                <td>
-                    <button class="btn btn-sm btn-outline-primary me-1" onclick="editarTicket(${ticket.id})"><i class="fas fa-edit"></i></button>
-                    <button class="btn btn-sm btn-danger" onclick="eliminarTicket(${ticket.id})"><i class="fas fa-trash"></i></button>
-                </td>
-            </tr>
-        `).join('');
-    } catch (error) {
-        console.error('Error al cargar tickets:', error);
-        showNotification('Error al cargar los tickets', 'danger');
-    }
-}
+    // Agregar eventos
+    document.getElementById('add-btn').addEventListener('click', openModal);
+    document.getElementById('refresh-btn').addEventListener('click', loadRecords);
+    document.querySelector('.close-btn').addEventListener('click', closeModal);
+    document.getElementById('record-form').addEventListener('submit', handleSubmit);
 
-// Función para guardar ticket
-async function guardarTicket() {
-    const form = document.getElementById('ticketForm');
-    
-    const ticketData = {
-        titulo: form.querySelector('input[type="text"]').value,
-        cliente_id: form.querySelectorAll('select')[0].value,
-        categoria: form.querySelectorAll('select')[1].value,
-        estado: 'Abierto',
-        prioridad: form.querySelectorAll('select')[2].value,
-        agente_id: form.querySelectorAll('select')[3].value || null,
-        descripcion: form.querySelector('textarea').value
-    };
-    
-    try {
-        const savedTicket = await createTicket(ticketData);
-        if (savedTicket) {
-            bootstrap.Modal.getInstance(document.getElementById('ticketModal')).hide();
-            form.reset();
-            await cargarTickets();
-            showNotification('Ticket guardado exitosamente', 'success');
-        }
-    } catch (error) {
-        console.error('Error al guardar ticket:', error);
-        showNotification('Error al guardar el ticket', 'danger');
-    }
-}
-
-// Función para eliminar ticket
-async function eliminarTicket(id) {
-    if (confirm('¿Está seguro de eliminar este ticket?')) {
-        try {
-            const success = await deleteTicket(id);
-            if (success) {
-                await cargarTickets();
-                showNotification('Ticket eliminado exitosamente', 'success');
-            } else {
-                showNotification('Error al eliminar el ticket', 'danger');
-            }
-        } catch (error) {
-            console.error('Error al eliminar ticket:', error);
-            showNotification('Error al eliminar el ticket', 'danger');
-        }
-    }
-}
-
-// Función para cargar clientes
-async function cargarClientes() {
-    try {
-        const clientes = await getClientes();
-        const select = document.querySelector('#ticketModal select');
-        
-        if (select) {
-            select.innerHTML = '<option value="">Seleccionar cliente</option>' +
-                clientes.map(cliente => `<option value="${cliente.id}">${cliente.empresa}</option>`).join('');
-        }
-    } catch (error) {
-        console.error('Error al cargar clientes:', error);
-    }
-}
-
-// Función para guardar cliente
-async function guardarCliente() {
-    const form = document.getElementById('clienteForm');
-    
-    const clienteData = {
-        empresa: form.querySelectorAll('input[type="text"]')[0].value,
-        contacto: form.querySelectorAll('input[type="text"]')[1].value,
-        email: form.querySelectorAll('input[type="email"]')[0].value,
-        telefono: form.querySelectorAll('input[type="text"]')[2].value,
-        direccion: form.querySelector('textarea').value
-    };
-    
-    try {
-        const savedCliente = await createCliente(clienteData);
-        if (savedCliente) {
-            bootstrap.Modal.getInstance(document.getElementById('clienteModal')).hide();
-            form.reset();
-            await cargarClientes();
-            showNotification('Cliente guardado exitosamente', 'success');
-        }
-    } catch (error) {
-        console.error('Error al guardar cliente:', error);
-        showNotification('Error al guardar el cliente', 'danger');
-    }
-}
-
-// Función para eliminar cliente
-async function eliminarCliente(id) {
-    if (confirm('¿Está seguro de eliminar este cliente?')) {
-        try {
-            const success = await deleteCliente(id);
-            if (success) {
-                await cargarClientes();
-                showNotification('Cliente eliminado exitosamente', 'success');
-            } else {
-                showNotification('Error al eliminar el cliente', 'danger');
-            }
-        } catch (error) {
-            console.error('Error al eliminar cliente:', error);
-            showNotification('Error al eliminar el cliente', 'danger');
-        }
-    }
-}
-
-// Función para cargar agentes
-async function cargarAgentes() {
-    try {
-        const agentes = await getAgentes();
-        const tbody = document.getElementById('agentesTableBody');
-        
-        if (tbody) {
-            tbody.innerHTML = agentes.map(agente => `
-                <tr>
-                    <td>
-                        <div class="d-flex align-items-center">
-                            <div class="user-avatar me-2">${agente.nombre.charAt(0)}</div>
-                            <div>
-                                <div class="fw-bold">${agente.nombre}</div>
-                                <small class="text-muted">${agente.email}</small>
-                            </div>
-                        </div>
-                    </td>
-                    <td>${agente.email}</td>
-                    <td><span class="role-badge role-${agente.rol.toLowerCase()}">${agente.rol}</span></td>
-                    <td><span class="badge bg-info">${agente.especialidad}</span></td>
-                    <td><span class="agent-status agent-${agente.estado.toLowerCase()}">${agente.estado}</span></td>
-                    <td><span class="badge bg-primary">${agente.tickets_asignados}</span></td>
-                    <td>
-                        <button class="btn btn-sm btn-outline-primary me-1"><i class="fas fa-edit"></i></button>
-                        <button class="btn btn-sm btn-danger" onclick="eliminarAgente(${agente.id})"><i class="fas fa-trash"></i></button>
-                    </td>
-                </tr>
-            `).join('');
-        }
-    } catch (error) {
-        console.error('Error al cargar agentes:', error);
-    }
-}
-
-// Función para guardar agente
-async function guardarAgente() {
-    const form = document.getElementById('agenteForm');
-    
-    const agenteData = {
-        nombre: form.querySelectorAll('input[type="text"]')[0].value,
-        email: form.querySelectorAll('input[type="email"]')[0].value,
-        telefono: form.querySelectorAll('input[type="text"]')[1].value,
-        rol: form.querySelectorAll('select')[0].value,
-        especialidad: form.querySelectorAll('select')[1].value,
-        estado: 'Offline'
-    };
-    
-    try {
-        const savedAgente = await createAgente(agenteData);
-        if (savedAgente) {
-            bootstrap.Modal.getInstance(document.getElementById('agenteModal')).hide();
-            form.reset();
-            await cargarAgentes();
-            showNotification('Agente guardado exitosamente', 'success');
-        }
-    } catch (error) {
-        console.error('Error al guardar agente:', error);
-        showNotification('Error al guardar el agente', 'danger');
-    }
-}
-
-// Función para eliminar agente
-async function eliminarAgente(id) {
-    if (confirm('¿Está seguro de eliminar este agente?')) {
-        try {
-            const success = await deleteAgente(id);
-            if (success) {
-                await cargarAgentes();
-                showNotification('Agente eliminado exitosamente', 'success');
-            } else {
-                showNotification('Error al eliminar el agente', 'danger');
-            }
-        } catch (error) {
-            console.error('Error al eliminar agente:', error);
-            showNotification('Error al eliminar el agente', 'danger');
-        }
-    }
-}
-
-// Función para cargar pólizas
-async function cargarPolizas() {
-    try {
-        const polizas = await getPolizas();
-        const tbody = document.getElementById('polizasTableBody');
-        
-        if (tbody) {
-            tbody.innerHTML = polizas.map(poliza => `
-                <tr>
-                    <td>${poliza.id}</td>
-                    <td>${poliza.clientes?.empresa || 'N/A'}</td>
-                    <td>${poliza.tipo}</td>
-                    <td>${poliza.vigencia_inicio}</td>
-                    <td>${poliza.vigencia_fin}</td>
-                    <td>${poliza.monto}</td>
-                    <td><span class="badge bg-${poliza.estado === 'Vigente' ? 'success' : poliza.estado === 'Por Vencer' ? 'warning' : 'danger'}">${poliza.estado}</span></td>
-                    <td>
-                        <button class="btn btn-sm btn-outline-primary me-1"><i class="fas fa-edit"></i></button>
-                        <button class="btn btn-sm btn-danger" onclick="eliminarPoliza(${poliza.id})"><i class="fas fa-trash"></i></button>
-                    </td>
-                </tr>
-            `).join('');
-        }
-    } catch (error) {
-        console.error('Error al cargar pólizas:', error);
-    }
-}
-
-// Función para guardar póliza
-async function guardarPoliza() {
-    const form = document.getElementById('polizaForm');
-    
-    const polizaData = {
-        cliente_id: form.querySelector('select').value,
-        tipo: form.querySelectorAll('select')[1].value,
-        vigencia_inicio: form.querySelectorAll('input[type="date"]')[0].value,
-        vigencia_fin: form.querySelectorAll('input[type="date"]')[1].value,
-        monto: parseFloat(form.querySelector('input[type="number"]').value),
-        estado: 'Vigente'
-    };
-    
-    try {
-        const savedPoliza = await createPoliza(polizaData);
-        if (savedPoliza) {
-            bootstrap.Modal.getInstance(document.getElementById('polizaModal')).hide();
-            form.reset();
-            await cargarPolizas();
-            showNotification('Póliza guardada exitosamente', 'success');
-        }
-    } catch (error) {
-        console.error('Error al guardar póliza:', error);
-        showNotification('Error al guardar la póliza', 'danger');
-    }
-}
-
-// Función para eliminar póliza
-async function eliminarPoliza(id) {
-    if (confirm('¿Está seguro de eliminar esta póliza?')) {
-        try {
-            const success = await deletePoliza(id);
-            if (success) {
-                await cargarPolizas();
-                showNotification('Póliza eliminada exitosamente', 'success');
-            } else {
-                showNotification('Error al eliminar la póliza', 'danger');
-            }
-        } catch (error) {
-            console.error('Error al eliminar póliza:', error);
-            showNotification('Error al eliminar la póliza', 'danger');
-        }
-    }
-}
-
-// Función para inicializar gráficos
-function initCharts() {
-    // Tickets Evolution Chart
-    const ticketsCtx = document.getElementById('ticketsChart');
-    if (ticketsCtx) {
-        new Chart(ticketsCtx, {
-            type: 'line',
-            data: {
-                labels: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun'],
-                datasets: [{
-                    label: 'Tickets Abiertos',
-                    data: [65, 59, 80, 81, 56, 55],
-                    borderColor: '#2563eb',
-                    backgroundColor: 'rgba(37, 99, 235, 0.1)',
-                    tension: 0.4
-                }, {
-                    label: 'Tickets Resueltos',
-                    data: [28, 48, 40, 19, 86, 27],
-                    borderColor: '#10b981',
-                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                    tension: 0.4
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'top',
-                    }
-                }
-            }
+    // Eventos para botones de editar y eliminar
+    document.querySelectorAll('.edit-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const id = e.target.closest('tr').dataset.id;
+            editRecord(id);
         });
-    }
+    });
 
-    // Category Chart
-    const categoryCtx = document.getElementById('categoryChart');
-    if (categoryCtx) {
-        new Chart(categoryCtx, {
-            type: 'doughnut',
-            data: {
-                labels: ['Soporte', 'Hosting', 'Oportuno', 'Otros'],
-                datasets: [{
-                    data: [45, 25, 20, 10],
-                    backgroundColor: ['#2563eb', '#f59e0b', '#10b981', '#64748b']
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false
-            }
+    document.querySelectorAll('.delete-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const id = e.target.closest('tr').dataset.id;
+            deleteRecord(id);
         });
-    }
-
-    // Reportes Chart
-    const reportesCtx = document.getElementById('reportesChart');
-    if (reportesCtx) {
-        new Chart(reportesCtx, {
-            type: 'bar',
-            data: {
-                labels: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun'],
-                datasets: [{
-                    label: 'Reportes Generados',
-                    data: [12, 19, 15, 25, 22, 30],
-                    backgroundColor: '#2563eb'
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false
-            }
-        });
-    }
+    });
 }
 
-// Función para inicializar gráficos de agentes
-function initAgentCharts() {
-    // Agent Performance Chart
-    const agentPerfCtx = document.getElementById('agentPerformanceChart');
-    if (agentPerfCtx) {
-        new Chart(agentPerfCtx, {
-            type: 'radar',
-            data: {
-                labels: ['Resolución', 'Satisfacción', 'Velocidad', 'Precisión', 'Comunicación'],
-                datasets: [{
-                    label: 'Juan Pérez',
-                    data: [85, 90, 75, 88, 92],
-                    borderColor: '#2563eb',
-                    backgroundColor: 'rgba(37, 99, 235, 0.2)'
-                }, {
-                    label: 'María García',
-                    data: [92, 85, 88, 90, 87],
-                    borderColor: '#10b981',
-                    backgroundColor: 'rgba(16, 185, 129, 0.2)'
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false
-            }
-        });
-    }
-
-    // Agent Tickets Chart
-    const agentTicketsCtx = document.getElementById('agentTicketsChart');
-    if (agentTicketsCtx) {
-        new Chart(agentTicketsCtx, {
-            type: 'bar',
-            data: {
-                labels: ['Juan', 'María', 'Carlos', 'Ana'],
-                datasets: [{
-                    label: 'Tickets Resueltos',
-                    data: [45, 38, 25, 15],
-                    backgroundColor: '#2563eb'
-                }, {
-                    label: 'Tickets Pendientes',
-                    data: [8, 5, 3, 2],
-                    backgroundColor: '#f59e0b'
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false
-            }
-        });
-    }
-}
-// Función para cargar clientes en los selects
-async function cargarClientesEnSelects() {
-    try {
-        const clientes = await getClientes();
-        const agentes = await getAgentes();
-        
-        // Cargar clientes en el select del ticket modal
-        const ticketClienteSelect = document.getElementById('clienteSelect');
-        if (ticketClienteSelect) {
-            ticketClienteSelect.innerHTML = '<option value="">Seleccionar cliente</option>' +
-                clientes.map(cliente => `<option value="${cliente.id}">${cliente.empresa}</option>`).join('');
-        }
-        
-        // Cargar agentes en el select del ticket modal
-        const agenteSelect = document.getElementById('agenteSelect');
-        if (agenteSelect) {
-            agenteSelect.innerHTML = '<option value="">Sin asignar</option>' +
-                agentes.map(agente => `<option value="${agente.id}">${agente.nombre}</option>`).join('');
-        }
-        
-        // Cargar clientes en el select del poliza modal
-        const polizaClienteSelect = document.getElementById('polizaClienteSelect');
-        if (polizaClienteSelect) {
-            polizaClienteSelect.innerHTML = '<option value="">Seleccionar cliente</option>' +
-                clientes.map(cliente => `<option value="${cliente.id}">${cliente.empresa}</option>`).join('');
-        }
-    } catch (error) {
-        console.error('Error al cargar datos para selects:', error);
-        showNotification('Error al cargar datos', 'danger');
-    }
+// Función para cargar registros
+async function loadRecords() {
+    records = await fetchTable(currentTable);
+    renderTable();
 }
 
-// Función para manejar el envío del formulario de tickets
-document.getElementById('ticketForm').addEventListener('submit', async function(e) {
+// Función para abrir el modal
+function openModal() {
+    document.getElementById('modal').style.display = 'block';
+    document.getElementById('modal-title').textContent = 'Agregar Nueva Póliza';
+    document.getElementById('record-form').reset();
+    document.getElementById('record-id').value = '';
+}
+
+// Función para cerrar el modal
+function closeModal() {
+    document.getElementById('modal').style.display = 'none';
+}
+
+// Función para editar un registro
+async function editRecord(id) {
+    const record = records.find(r => r.id === id);
+    if (!record) return;
+
+    document.getElementById('modal-title').textContent = 'Editar Póliza';
+    document.getElementById('record-id').value = record.id;
+    document.getElementById('cliente').value = record.cliente;
+    document.getElementById('tipo').value = record.tipo;
+    document.getElementById('vigencia').value = record.vigencia;
+    document.getElementById('monto').value = record.monto;
+    document.getElementById('estado').value = record.estado;
+    
+    document.getElementById('modal').style.display = 'block';
+}
+
+// Función para manejar el envío del formulario
+async function handleSubmit(e) {
     e.preventDefault();
     
-    const form = this;
-    const ticketData = {
-        titulo: form.querySelector('input[type="text"]').value,
-        cliente_id: form.querySelector('#clienteSelect').value,
-        categoria: form.querySelectorAll('select')[1].value,
-        estado: 'Abierto',
-        prioridad: form.querySelectorAll('select')[2].value,
-        agente_id: form.querySelector('#agenteSelect').value || null,
-        descripcion: form.querySelector('textarea').value
+    const id = document.getElementById('record-id').value;
+    const recordData = {
+        cliente: document.getElementById('cliente').value,
+        tipo: document.getElementById('tipo').value,
+        vigencia: document.getElementById('vigencia').value,
+        monto: parseFloat(document.getElementById('monto').value),
+        estado: document.getElementById('estado').value
     };
-    
-    try {
-        const savedTicket = await createTicket(ticketData);
-        if (savedTicket) {
-            bootstrap.Modal.getInstance(document.getElementById('ticketModal')).hide();
-            form.reset();
-            await cargarTickets();
-            showNotification('Ticket guardado exitosamente', 'success');
-        }
-    } catch (error) {
-        console.error('Error al guardar ticket:', error);
-        showNotification('Error al guardar el ticket', 'danger');
-    }
-});
 
-// Función para manejar el envío del formulario de clientes
-document.getElementById('clienteForm').addEventListener('submit', async function(e) {
-    e.preventDefault();
-    
-    const form = this;
-    const clienteData = {
-        empresa: form.querySelectorAll('input[type="text"]')[0].value,
-        contacto: form.querySelectorAll('input[type="text"]')[1].value,
-        email: form.querySelectorAll('input[type="email"]')[0].value,
-        telefono: form.querySelectorAll('input[type="text"]')[2].value,
-        direccion: form.querySelector('textarea').value
-    };
-    
-    try {
-        const savedCliente = await createCliente(clienteData);
-        if (savedCliente) {
-            bootstrap.Modal.getInstance(document.getElementById('clienteModal')).hide();
-            form.reset();
-            await cargarClientes();
-            await cargarClientesEnSelects(); // Actualizar selects
-            showNotification('Cliente guardado exitosamente', 'success');
-        }
-    } catch (error) {
-        console.error('Error al guardar cliente:', error);
-        showNotification('Error al guardar el cliente', 'danger');
+    if (id) {
+        // Actualizar registro existente
+        await updateRecord(currentTable, id, recordData);
+    } else {
+        // Insertar nuevo registro
+        await insertRecord(currentTable, recordData);
     }
-});
 
-// Función para manejar el envío del formulario de agentes
-document.getElementById('agenteForm').addEventListener('submit', async function(e) {
-    e.preventDefault();
-    
-    const form = this;
-    const agenteData = {
-        nombre: form.querySelectorAll('input[type="text"]')[0].value,
-        email: form.querySelectorAll('input[type="email"]')[0].value,
-        telefono: form.querySelectorAll('input[type="text"]')[1].value,
-        rol: form.querySelectorAll('select')[0].value,
-        especialidad: form.querySelectorAll('select')[1].value,
-        estado: 'Offline'
-    };
-    
-    try {
-        const savedAgente = await createAgente(agenteData);
-        if (savedAgente) {
-            bootstrap.Modal.getInstance(document.getElementById('agenteModal')).hide();
-            form.reset();
-            await cargarAgentes();
-            await cargarClientesEnSelects(); // Actualizar selects
-            showNotification('Agente guardado exitosamente', 'success');
-        }
-    } catch (error) {
-        console.error('Error al guardar agente:', error);
-        showNotification('Error al guardar el agente', 'danger');
-    }
-});
-
-// Función para manejar el envío del formulario de pólizas
-document.getElementById('polizaForm').addEventListener('submit', async function(e) {
-    e.preventDefault();
-    
-    const form = this;
-    const polizaData = {
-        cliente_id: form.querySelector('#polizaClienteSelect').value,
-        tipo: form.querySelectorAll('select')[1].value,
-        vigencia_inicio: form.querySelectorAll('input[type="date"]')[0].value,
-        vigencia_fin: form.querySelectorAll('input[type="date"]')[1].value,
-        monto: parseFloat(form.querySelector('input[type="number"]').value),
-        estado: 'Vigente'
-    };
-    
-    try {
-        const savedPoliza = await createPoliza(polizaData);
-        if (savedPoliza) {
-            bootstrap.Modal.getInstance(document.getElementById('polizaModal')).hide();
-            form.reset();
-            await cargarPolizas();
-            showNotification('Póliza guardada exitosamente', 'success');
-        }
-    } catch (error) {
-        console.error('Error al guardar póliza:', error);
-        showNotification('Error al guardar la póliza', 'danger');
-    }
-});
-
-// Actualizar la función initApp para cargar los selects
-function initApp() {
-    setupNavigation();
-    loadInitialData();
-    setupForms();
-    cargarClientesEnSelects(); // Nueva línea
-    initCharts();
+    closeModal();
+    loadRecords();
 }
+
+// Función para eliminar un registro
+async function deleteRecord(id) {
+    if (confirm('¿Estás seguro de que quieres eliminar esta póliza?')) {
+        await deleteRecord(currentTable, id);
+        loadRecords();
+    }
+}
+
+// Inicializar la aplicación
+loadRecords();
